@@ -1,92 +1,309 @@
-# Infrastructure
+# FretePago Core - Infrastructure
 
+Pacote de abstrações e padronizações para camada de infraestrutura de projetos.
 
+-   instalação
+-   [Message Bus](#Message-Bus)
+    -   [Configuração](#Configuração)
+    -   [Commands/Queries](#Comands/Queries)
+        -   [Despachando Commands/Queries](#Despachando-Commands/Queries)
+        -   [Recebendo Commands/Queries](#Despachando-Commands/Queries)
+    -   [Eventos](#Eventos)
+        -   [Despachando Eventos](#Despachando-Eventos)
+        -   [Recebendo Eventos](#Recebendo-Eventos)
 
-## Getting started
+## Message Bus
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Apesar do modulo ser agnóstico de frameworks, usaremos como exemplo a framework **Laravel**.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Atualmente utilizamos por baixo do capô a Lib **Ecotone** como message bus, podendo ser substituido conforme necessidade, basta respeitar o contrato _MessageBusInterface._
 
-## Add your files
+Caso necessite usar o message bus em sua forma pura, o Message bus tem uma função chamada `getRawBus` que retorna a instancia do bus configurado.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Links que podem ajudar:
+[Ecotone](https://docs.ecotone.tech/)
+
+### Configuração
+
+Para começar a trabalhar com o padrão **CQRS** e **EDA** no projeto, se faz necessário a configuração de um bus de envio de mensagens(comands/queries/events).
+
+Em seu arquivo de injeção de dependencia _App/Providers/AppServiceProvider.php_ registre:
+
+```php
+$this->app->singleton(JsonToPhpConverter::class, JsonToPhpConverter::class);
+$this->app->singleton(PhpToJsonConverter::class, PhpToJsonConverter::class);
+$this->app->singleton(
+            MessageBusInterface::class,
+            fn() => (new EcotoneLiteMessageBus())
+                ->withAvailableServices($this->app)
+                ->withNamespaces(['App', 'FreightPayments'])
+                ->withServiceName('escrow')
+                ->run()
+        );
+```
+
+onde:
+
+-   _JsonToPhpConverter e PhpToJsonConverter_ - Conversores padrão do ecotone.
+-   _MessageBusInterface_ - Interface do Message Bus para a inversão de controle.
+-   _EcotoneLiteMessageBus_ - Implementação padrão do message bus(Ecotone)
+    -   _withAvailableServices_ - Informa ao Ecotone o container ou array de objetos resolvidos para a lib fazer a sua inferência e injeções de dependencias em tempo de execução.
+    -   _withNamespaces_ - Informa ao Ecotone quais namespaces devem ser analisados para capturar as suas anotações.
+    -   _withServiceName_ - Informa ao Ecotone o nome do serviço.
+    -   _run_ - Inicia o ecotone.
+
+**obs:** Esta configuração deve ser realizada somente a nível de aplicação.
+
+### Comands/Queries
+
+Após a configuração do Message Bus ser realizada, adicione no arquivo de injeção de dependencia da sua funcionalidade:
+
+```php
+$this->app->when(Feature::class)->needs(Dispatcher::class)->give(
+            function () {
+                return new DispatcherBus($this->app->make(MessageBusInterface::class));
+            }
+        );
+```
+
+onde:
+
+-   _Dispatcher_ - Interface do Dispatcher Message para a inversão de controle.
+-   _DispatcherBus_ - Implementação do Dispatcher message, recebe como parametro a instancia do Message Bus configurada acima.
+
+#### Despachando Commands/Queries
+
+O envio de comandos é tecnicamente igual ao de queries, portanto a configuração é a mesma para ambos.
+
+```php
+class FeatureController extends Controller
+{
+   public function __construct(
+       private readonly Dispatcher $dispatcher,
+       private readonly ActionFactory $factory,
+   ) {
+   }
+
+   public function __invoke(FeatureReq $req): JsonResponse
+   {
+       $request = $req->validated();
+       $command = $this->factory->create(FeatureActions::action, $request);
+       $event = $this->dispatcher->dispatch($command);
+      // ...
+   }
+}
+```
+
+#### Recebendo Commands/Queries
+
+Assim como o evnio de comandos e queries são parecidos, o recebimento não foge á regra.
+
+Na pasta feature/Infrastructure/Cqrs crie o arquivo e adicione:
+
+```php
+class FeatureCommandHandler
+{
+ public function __construct(private FeatureHandler $handler)
+    {
+    }
+
+     #[CommandHandler]
+    public function createdNotification(string $event): void
+    {
+         $result = $this->handler->handle($event);
+         if ($result->isFailure()) {
+             throw $result->getError();
+         }
+    }
+}
+```
+
+Este arquivo serve como uma bridge para a camada de aplicação, além de isolar o conhecimendo do command bus(Ecotone) e suas anotações, fazendo assim a camada de application ficar agnóstica de detalhes do bus.
+
+Onde:
+
+-   _FeatureHandler_ - Injeção do handler da camada de aplicação para executar a regra de orquestração.
+-   _#[CommandHandler]_ - Indica que a mensagem a ser recebida é do tipo command.
+
+Após o arquivo criado, é necessário injetar o mesmo no container de DI, no arquivo feature/Infrastructure/Providers/InfrastructureProvider.php adicione:
+
+```php
+ $this->app->bind(FeatureCommandHandler::class, FeatureCommandHandler::class, true);
+```
+
+### Eventos
+
+Para o despacho de eventos usaremos a mesma configuração já realizada para Commands/Queries, visto que o Dispatcher já entrega uma implementação comum para os três tipos de envios.
+Para os eventos, há a necessidade de configuração da fila/tópico ao qual o será enviada a mensagem, diferentemente de commands/queries que são executados in-memory.
+
+O Primeiro passo é configurar os comandos de consumidor do ecotone, pois estes comandos são necessários para exibir e/ou listar os endpoints de eventos disponiveis na aplicação.
+
+Na pasta App/Commands crie uma pasta MessageBus e adicione dois arquivos:
+
+```php
+declare(strict_types=1);
+
+namespace App\Console\Commands\MessageBus;
+
+use FretePago\Core\Infrastructure\MessageBus\MessageBusInterface;
+use Illuminate\Console\Command;
+
+class MessageBusListCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'message-bus:list';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'list message bus channel consumers';
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle(MessageBusInterface $messageBus): void
+    {
+        $command = $messageBus->listConsumersCommand();
+        $this->table($command['header'], $command['rows']);
+    }
+}
+```
+
+```php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands\MessageBus;
+
+use FretePago\Core\Infrastructure\MessageBus\MessageBusInterface;
+use Illuminate\Console\Command;
+
+class MessageBusRunCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'message-bus:run {channelName} {verb=vvv}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'run message bus channel consumer';
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle(MessageBusInterface $messageBus): void
+    {
+        $messageBus->runConsumerCommand($this->argument('channelName'), $this->argument('verb'));
+    }
+}
+```
+
+Se tudo ocorrer bem, ao executar o comando `php artisan list` será exibdo os comandos configurados.
+
+Na pasta **app**, crie uma pasta **Ecotone** e dentro dela crie os Arquivos de configuração:
+
+```php
+class EcotoneChannelProvider
+{
+    #[ServiceContext]
+    public function enableEscrowChannel()
+    {
+        return [
+            KafkaDistribuitedBusConfiguration::createPublisher(
+                busReferenceName: EscrowBus::class,
+                topicName: env('KAFKA_ESCROW_TOPIC_NAME'),
+            ),
+            KafkaDistribuitedBusConfiguration::createConsumer(
+                topicName: env('KAFKA_ESCROW_TOPIC_NAME'),
+                endpointId: 'consumer',
+            ),
+            PollingMetadata::create('consumer')
+                ->setEnabledErrorChannel(true)
+                ->setErrorChannelName('errorChannelPublisher'),
+        ];
+    }
+}
+```
+
+Onde:
+
+-   _#[ServiceContext]_ - Anotação do Ecotone para indicar uma configuração de serviço
+-   _KafkaDistribuitedBusConfiguration::createPublisher_ - Cria o driver do publicador do evento, no caso, se trata de um broker _kafka_ com o tipo de envio _Distributed_
+    -   _busReferenceName_(opcional) - há casos em que se faz necessário o envio de multiplos eventos, este parametro diz ao ecotone que a configuração deste tópico pode ser invocada ao fazer referencia ao valor deste parametro(logo abaixo o exemplo), caso não seja especificado, funcionará como um publisher PADRÃO.
+    -   _topicName_ - Indica o nome do tópico(no caso do kafka) que receberá o evento
+-   _KafkaDistribuitedBusConfiguration::createConsumer_ - Cria o driver do Consumidor do evento, no caso, se trata de um broker _kafka_ com o tipo de envio _Distributed_
+    -   _topicName_ - indica o nome do tópico(no caso do kafka) que o consumidor irá se conectar para consumir os eventos.
+    -   _endpointId_ - Apelido do canal de consumidor para esta fila, este nome será exibido ao executar o comando artisan `php artisan message-bus:list`
+-   _PollingMetadata::create_ - Criar um pool de conexaão para o caso do processamento do evento ocorrer um erro, é responsável por redirecionar a mensagem 'defeituosa' para uma **Dead Letter Queue(DLQ)**
+    -   _setEnabledErrorChannel(true)_ - habilita a DLQ
+    -   _setErrorChannelName('errorChannelPublisher')_ - indica o service activator da DLQ.
+
+#### Despachando Eventos
+
+O envio de eventos é tecnicamente igual ao de queries, portanto a configuração é a mesma para ambos.
+
+Em alguns casos é necessário o envio de multiplos eventos, para isso há algumas configurações adicionais:
+
+no arquivo app/ecotone/[configuration].php, na sua configuração adicione o **busReferenceName** com a referencia para uma interface(conforme exemplo acima).
+No arquivo de injeção de dependencia adicione uma nova injeção para o Dispatcher, como sugestão voce pode usar o type variadics do laravel.
+
+O dispatcher conta com uma função `withPublisherBusReferenceName` que recebe a referencia da interface especificada na **busReferenceName** configuração. ex:
+
+```php
+$this->app->when(CreateEscrowBankingPaymentController::class)->needs(TransactionDispatcher::class)->give(
+            function () {
+                $intance = $this->app->make(MessageBusInterface::class);
+                return (new TransactionDispatcher($this->app->make(TransactionBus::class)))->withPublisherBusReferenceName(TransactionBus::class);
+            }
+        );
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.fretebras.com.br/fretepago/payments/frete-core/infrastructure.git
-git branch -M main
-git push -uf origin main
+
+#### Recebendo Eventos
+
+Adicione um arquivo em feature/Infrastructure/Eda:
+
+```php
+class FeatureEventHandler
+{
+    public function __construct(private FeatureHandler $handler)
+    {
+    }
+
+    #[Distributed]
+    #[EventHandler(listenTo: "Domain\\Events\\FeatureCreated")]
+    public function createdNotification(FeatureEvent $event): void
+    {
+         $result = $this->handler->handle($event);
+         if ($result->isFailure()) {
+             throw $result->getError();
+         }
+    }
+}
 ```
 
-## Integrate with your tools
+Assim como em commands/queries, este arquivo tem a função de bridge para a camada de aplicação.
 
-- [ ] [Set up project integrations](http://gitlab.fretebras.com.br/fretepago/payments/frete-core/infrastructure/-/settings/integrations)
+Onde:
 
-## Collaborate with your team
+-   _#[Distributed]_ - Indica o tipo de driver configurado, no caso a configuração acima e padrão é a **distributed**
+-   _#[EventHandler(listenTo: "Domain\\Events\\FeatureCreated")]_ - indica que a função é to dipo manipulador de eventos.
+    -   _listenTo_ - indica a rota dos eventos que ele consumirá, por padrão a rota é o próprio namespace do evento.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Para iniciar o consumidor de eventos execute o comando `php artisan message-bus:run {consumer}` onde {consumer} é o nome do canal configurado na chave _endpointId_ arquivo App/Ecotone/[configuration].php

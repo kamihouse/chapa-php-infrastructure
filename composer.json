@@ -1,0 +1,70 @@
+{
+    "name": "fretepago/core-infrastructure",
+    "authors": [
+        {
+            "name": "Mateus Macedo Dos Anjos",
+            "email": "mateus.anjos@fretebras.com.br"
+        }
+    ],
+    "scripts": {
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
+        "unit-test": "vendor/bin/pest --no-coverage",
+        "unit-test:debug": "php -d memory_limit=-1 -d display_errors=on -d xdebug.mode=debug -d xdebug.client_host=127.0.0.1 -d xdebug.client_port=9003 -d xdebug.start_with_request=1 vendor/bin/pest --no-coverage",
+        "unit-test:coverage": "vendor/bin/pest --coverage",
+        "code-analyze": " php -d memory_limit=-1 vendor/bin/phpstan analyze",
+        "code-analyze:report": " php -d memory_limit=-1 vendor/bin/phpstan analyze --error-format=gitlab > ${REPORT_PATH}quality.json || true",
+        "check-style": "vendor/bin/php-cs-fixer fix --diff --verbose --dry-run .",
+        "lint-fix": "vendor/bin/php-cs-fixer fix .",
+        "lint-validation": "vendor/bin/php-cs-fixer fix -v --using-cache no --dry-run --stop-on-violation",
+        "changelog": "conventional-changelog",
+        "release": "conventional-changelog --commit",
+        "release:patch": "conventional-changelog --patch --commit",
+        "release:minor": "conventional-changelog --minor --commit",
+        "release:major": "conventional-changelog --major --commit",
+        "release:rc": "conventional-changelog --rc --commit"
+    },
+    "autoload": {
+        "psr-4": {
+            "FretePago\\Core\\Infrastructure\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "pestphp/pest": "^2.16",
+        "ramsey/conventional-commits": "^1.5",
+        "phpstan/phpstan": "^1.10",
+        "marcocesarato/php-conventional-changelog": "^1.17",
+        "friendsofphp/php-cs-fixer": "^3.23",
+        "captainhook/plugin-composer": "^5.3",
+        "captainhook/captainhook": "^5.16"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "captainhook/plugin-composer": true
+        }
+    },
+    "require": {
+        "ecotone/lite-application": "^1.102",
+        "ecotone/enqueue": "^1.102",
+        "ecotone/jms-converter": "^1.92",
+        "enqueue/enqueue": "^0.10.19",
+        "enqueue/rdkafka": "^0.10.19",
+        "fretepago/core-application": "dev-master"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
