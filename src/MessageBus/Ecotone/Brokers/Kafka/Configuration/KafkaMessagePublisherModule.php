@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\KafkaOutboundChannelAdapterBuilder;
 use Ecotone\AnnotationFinder\AnnotationFinder;
 use Ecotone\Messaging\Attribute\ModuleAnnotation;
 use Ecotone\Messaging\Config\Annotation\AnnotationModule;
@@ -14,7 +15,6 @@ use Ecotone\Messaging\Handler\Gateway\GatewayProxyBuilder;
 use Ecotone\Messaging\Handler\Gateway\ParameterToMessageConverter\{GatewayHeaderBuilder, GatewayHeaderValueBuilder, GatewayHeadersBuilder, GatewayPayloadBuilder};
 use Ecotone\Messaging\Handler\InterfaceToCallRegistry;
 use Ecotone\Messaging\{MessageHeaders, MessagePublisher};
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\KafkaOutboundChannelAdapterBuilder;
 
 #[ModuleAnnotation]
 final class KafkaMessagePublisherModule extends NoExternalConfigurationModule implements AnnotationModule

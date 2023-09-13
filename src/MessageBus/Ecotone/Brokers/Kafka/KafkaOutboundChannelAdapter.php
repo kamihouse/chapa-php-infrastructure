@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\CustomEnqueueOutboundChannelAdapter;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\IHeaderMessage;
 use Ecotone\Enqueue\CachedConnectionFactory;
 use Ecotone\Messaging\Channel\PollableChannel\Serialization\OutboundMessageConverter;
 use Ecotone\Messaging\Conversion\ConversionService;
 use Ecotone\Messaging\Message;
 use Enqueue\RdKafka\RdKafkaTopic;
-use FretePago\Core\Domain\Event;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\CustomEnqueueOutboundChannelAdapter;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\IHeaderMessage;
 use Interop\Queue\Message as buildMessageReturn;
 
 final class KafkaOutboundChannelAdapter extends CustomEnqueueOutboundChannelAdapter
@@ -45,14 +44,13 @@ final class KafkaOutboundChannelAdapter extends CustomEnqueueOutboundChannelAdap
         /** @var \Enqueue\RdKafka\RdKafkaMessage */
         $kafkaMessage = parent::buildMessage($message);
         $props = $kafkaMessage->getProperties();
-
+        $headers = $kafkaMessage->getHeaders();
         if (isset($props['partition']) && is_int($props['partition'])) {
             $kafkaMessage->setPartition($props['partition']);
         }
 
-        if (is_subclass_of($message->getPayload(), Event::class)) {
-            $key = $kafkaMessage->getHeader('TraceId') ?: null;
-            $kafkaMessage->setKey($key);
+        if (isset($headers['TraceId']) && !empty($headers['TraceId'])) {
+            $kafkaMessage->setKey($headers['TraceId']);
         }
 
         return $kafkaMessage;

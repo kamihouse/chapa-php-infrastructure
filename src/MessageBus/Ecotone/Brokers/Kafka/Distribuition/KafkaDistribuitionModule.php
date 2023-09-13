@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Distribuition;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Distribuition;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaMessagePublisherConfiguration;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\{KafkaBackedMessageChannelBuilder, KafkaOutboundChannelAdapterBuilder};
 use Ecotone\AnnotationFinder\AnnotationFinder;
 use Ecotone\Messaging\Channel\SimpleMessageChannelBuilder;
 use Ecotone\Messaging\Config\Annotation\ModuleConfiguration\{ExtensionObjectResolver, NoExternalConfigurationModule};
@@ -16,8 +18,6 @@ use Ecotone\Messaging\MessageHeaders;
 use Ecotone\Messaging\Support\Assert;
 use Ecotone\Modelling\Config\DistributedGatewayModule;
 use Ecotone\Modelling\{DistributedBus, DistributionEntrypoint};
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaMessagePublisherConfiguration;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\{KafkaBackedMessageChannelBuilder, KafkaOutboundChannelAdapterBuilder};
 
 class KafkaDistribuitionModule
 {

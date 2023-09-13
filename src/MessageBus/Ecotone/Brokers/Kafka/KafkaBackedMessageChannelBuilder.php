@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaTopicConfiguration;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaConnectionFactory;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 use Ecotone\Enqueue\EnqueueMessageChannelBuilder;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaTopicConfiguration;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaConnectionFactory;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 
 final class KafkaBackedMessageChannelBuilder extends EnqueueMessageChannelBuilder
 {

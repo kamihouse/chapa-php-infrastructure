@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers;
 
 use Ecotone\Enqueue\EnqueueInboundChannelAdapter;
 use Ecotone\Messaging\Endpoint\PollingConsumer\ConnectionException;
 use Ecotone\Messaging\Message;
-use Enqueue\RdKafka\RdKafkaConsumer;
+use Interop\Queue\Consumer;
 use Interop\Queue\Message as EnqueueMessage;
 
 abstract class CustomEnqueueInboundChannelAdapter extends EnqueueInboundChannelAdapter
@@ -24,7 +24,7 @@ abstract class CustomEnqueueInboundChannelAdapter extends EnqueueInboundChannelA
                 $this->initialized = true;
             }
 
-            /** @var RdKafkaConsumer */
+            /** @var Consumer */
             $consumer = $this->connectionFactory->getConsumer(
                 $this->connectionFactory->createContext()->createQueue($this->queueName)
             );

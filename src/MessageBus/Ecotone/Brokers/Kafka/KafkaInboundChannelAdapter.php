@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\CustomEnqueueInboundChannelAdapter;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaTopicConfiguration;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaConnectionFactory;
 use Ecotone\Enqueue\{CachedConnectionFactory, HttpReconnectableConnectionFactory, InboundMessageConverter};
 use Ecotone\Messaging\Conversion\ConversionService;
 use Ecotone\Messaging\Endpoint\InboundChannelAdapterEntrypoint;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\CustomEnqueueInboundChannelAdapter;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaTopicConfiguration;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaConnectionFactory;
 use GuzzleHttp\Exception\ConnectException;
 
 final class KafkaInboundChannelAdapter extends CustomEnqueueInboundChannelAdapter
@@ -57,7 +57,7 @@ final class KafkaInboundChannelAdapter extends CustomEnqueueInboundChannelAdapte
 
         $kafkaConsumer = $this->connection->getConsumer('false');
         $topicPartitions = array_map(
-            fn($val) => $this->connection->createTopicPartition($this->queueName, $val),
+            fn ($val) => $this->connection->createTopicPartition($this->queueName, $val),
             $this->topicConfig->getConsumerPartitions()
         );
 

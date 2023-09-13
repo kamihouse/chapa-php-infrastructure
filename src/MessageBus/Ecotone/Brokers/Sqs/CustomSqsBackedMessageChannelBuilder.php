@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Sqs;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Sqs;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 use Ecotone\Enqueue\EnqueueMessageChannelBuilder;
 use Ecotone\Sqs\SqsInboundChannelAdapterBuilder;
 use Enqueue\Sqs\SqsConnectionFactory;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 
 final class CustomSqsBackedMessageChannelBuilder extends EnqueueMessageChannelBuilder
 {

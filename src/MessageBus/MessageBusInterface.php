@@ -2,82 +2,56 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus;
+namespace ChapaPhp\Infrastructure\MessageBus;
 
-use FretePago\Core\Domain\Message\Message;
+use ChapaPhp\Application\Command;
+use ChapaPhp\Application\Query;
+use ChapaPhp\Domain\Event;
 
 interface MessageBusInterface
 {
     /**
-     * return original instance lib
-     *
-     * @return mixed
+     * @template T
      */
     public function getRawBus();
 
     /**
-     * return the command bus
-     *
-     * @return mixed
+     * @template T
      */
     public function getCommandBus();
 
     /**
-     * return the query bus
-     *
-     * @return mixed
+     * @template T
      */
     public function getQueryBus();
 
     /**
-     * send command
-     *
-     * @param Message $message
-     *
-     * @return mixed
+     * @template T of Command
+     * @template R
      */
-    public function sendCommand(Message $message);
+    public function sendCommand($message);
 
     /**
-     * send query
-     *
-     * @param Message $message
-     *
-     * @return mixed
+     * @template T of Query
+     * @template R
      */
-    public function sendQuery(Message $message);
+    public function sendQuery($message);
 
     /**
-     * publish event
-     *
-     * @param Message $message
-     *
-     * @param string $eventBusReferenceName
-     *
-     * @return void
+     * @template T of Event
      */
-    public function publishMessage(Message $message, ?string $eventBusReferenceName);
+    public function publishMessage($message, ?string $eventBusReferenceName);
 
     /**
-     * list consumer channels to run
-     *
-     * @param Message $message
-     *
-     * @return array
+     * list consumer channels to run.
      */
     public function listConsumersCommand(): array;
 
     /**
+     * @template R
      * run consumer channels
      *
-     * @param Message $message
-     *
-     * @param string $channelName
-     *
-     * @param string $verbose
-     *
-     * @return void
+     * @return R
      */
     public function runConsumerCommand(string $channelName, string $verbose = 'vvv');
-
 }

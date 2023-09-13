@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection;
 
 use Enqueue\RdKafka\RdKafkaConnectionFactory;
 use RdKafka\{Conf, KafkaConsumer, TopicPartition};

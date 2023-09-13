@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Distribuition;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Distribuition;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\KafkaBackedMessageChannelBuilder;
 use Ecotone\AnnotationFinder\AnnotationFinder;
 use Ecotone\Messaging\Attribute\ModuleAnnotation;
 use Ecotone\Messaging\Config\Annotation\AnnotationModule;
 use Ecotone\Messaging\Config\Annotation\ModuleConfiguration\NoExternalConfigurationModule;
 use Ecotone\Messaging\Config\{Configuration, ModuleReferenceSearchService};
 use Ecotone\Messaging\Handler\InterfaceToCallRegistry;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\KafkaBackedMessageChannelBuilder;
 
 #[ModuleAnnotation]
 class KafkaDistribuitedModule extends NoExternalConfigurationModule implements AnnotationModule

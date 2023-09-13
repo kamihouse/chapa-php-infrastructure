@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus;
+namespace ChapaPhp\Infrastructure\MessageBus;
 
-use FretePago\Core\Application\{Command, Dispatcher, Query};
-use FretePago\Core\Application\Result;
-use FretePago\Core\Domain\Message\Message;
-use FretePago\Core\Infrastructure\Errors\InfrastructureError;
+use ChapaPhp\Application\Error\DispatcherError;
+use ChapaPhp\Application\Result;
+use ChapaPhp\Application\{Command, Dispatcher, Query};
+use ChapaPhp\Domain\{Event, Message};
 
+/**
+ * @implements Dispatcher<Event|Message, Result>
+ */
 class DispatcherBus implements Dispatcher
 {
     private ?string $eventBusReferenceName = null;
@@ -19,11 +22,7 @@ class DispatcherBus implements Dispatcher
     }
 
     /**
-     * Specify the publisher reference to a specific message publisher
-     *
-     * @param string $message
-     *
-     * @return void
+     * Specify the publisher reference to a specific message publisher.
      */
     public function withPublisherBusReferenceName(string $eventBusReferenceName): self
     {
@@ -32,14 +31,7 @@ class DispatcherBus implements Dispatcher
         return $this;
     }
 
-    /**
-     * Dispatch a message or subtype of a message(query, command, event)
-     *
-     * @param Message $message
-     *
-     * @return Result
-     */
-    public function dispatch(Message $message): Result
+    public function dispatch($message)
     {
         try {
             if (is_a($message, Command::class)) {
@@ -50,17 +42,15 @@ class DispatcherBus implements Dispatcher
                 return $this->messageBus->sendQuery($message);
             }
 
-            if (is_a($message, Message::class)) {
+            if (is_a($message, Event::class)) {
                 $this->messageBus->publishMessage($message, $this->eventBusReferenceName);
 
                 Result::success(true);
             }
-
         } catch (\Throwable $e) {
-            return Result::failure(new InfrastructureError($e->getMessage()));
+            return Result::failure(new DispatcherError($e->getMessage()));
         }
 
-        return Result::failure(new InfrastructureError('Message not supported.'));
+        return Result::failure(new DispatcherError('Message not supported.'));
     }
-
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Configuration;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Configuration;
 
 use Ecotone\AnnotationFinder\AnnotationFinder;
 use Ecotone\Messaging\Attribute\ModuleAnnotation;

@@ -21,3 +21,4 @@ _ide_helper.php
 .php-cs-fixer.cache
 docker-compose.*
 .setup
+use_local.php

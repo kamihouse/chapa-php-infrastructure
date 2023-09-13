@@ -2,18 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Converters\JsonToPhpConverter;
+use ChapaPhp\Infrastructure\MessageBus\MessageBusInterface;
 use Ecotone\Lite\EcotoneLite;
 use Ecotone\Messaging\Config\ConfiguredMessagingSystem;
 use Ecotone\Messaging\Config\ServiceConfiguration;
 use Ecotone\Messaging\Conversion\MediaType;
 use Ecotone\Messaging\MessagePublisher;
+use Ecotone\Modelling\CommandBus;
 use Ecotone\Modelling\DistributedBus;
 use Ecotone\Modelling\EventBus;
-use FretePago\Core\Domain\Message\Message;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Converters\JsonToPhpConverter;
-use FretePago\Core\Infrastructure\MessageBus\MessageBusInterface;
+use Ecotone\Modelling\QueryBus;
 use Psr\Container\ContainerInterface;
 
 class EcotoneLiteMessageBus implements MessageBusInterface
@@ -21,15 +22,15 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     /**
      * @var ConfiguredMessagingSystem
      */
-    private $ecotoneInstance = null;
+    private $ecotoneInstance;
 
     /**
      * @var array<string>
      */
-    private $namespaces = ['Frete\\Core'];
+    private $namespaces = ['Fretepago\\Core'];
 
     /**
-     * @var ContainerInterface| array<object>
+     * @var array<object>|ContainerInterface
      */
     private $servicesProvidersInstance = [];
 
@@ -43,48 +44,37 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     }
 
     /**
-     * Set the container or array of available services
-     *
-     * @param ContainerInterface|array $servicesProvidersInstance
-     *
-     * @return self
+     * Set the container or array of available services.
      */
     public function withAvailableServices(ContainerInterface|array $servicesProvidersInstance): self
     {
         $this->servicesProvidersInstance = $servicesProvidersInstance;
+
         return $this;
     }
 
     /**
-     * Set the namespaces for lib analyze annotations
-     *
-     * @param array $namespaces
-     *
-     * @return self
+     * Set the namespaces for lib analyze annotations.
      */
     public function withNamespaces(array $namespaces): self
     {
         $this->namespaces = array_merge($this->namespaces, $namespaces);
+
         return $this;
     }
 
     /**
-     * Set the service name
-     *
-     * @param string $namespaces
-     *
-     * @return self
+     * Set the service name.
      */
     public function withServiceName(string $name): self
     {
         $this->serviceName = $name;
+
         return $this;
     }
 
     /**
-     * start the service
-     *
-     * @return self
+     * start the service.
      */
     public function run(): self
     {
@@ -102,19 +92,23 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     }
 
     /**
-     * return original instance lib
+     * return the raw bus.
+     *
+     * @implements MessageBusInterface<ConfiguredMessagingSystem>
      *
      * @return ConfiguredMessagingSystem
      */
-    public function getRawBus(): ConfiguredMessagingSystem
+    public function getRawBus()
     {
         return $this->ecotoneInstance;
     }
 
     /**
-     * return the command bus
+     * return the command bus.
      *
-     * @return \Ecotone\Modelling\CommandBus
+     * @implements MessageBusInterface<CommandBus>
+     *
+     * @return CommandBus
      */
     public function getCommandBus()
     {
@@ -122,9 +116,11 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     }
 
     /**
-     * return the query bus
+     * return the query bus.
      *
-     * @return \Ecotone\Modelling\QueryBus
+     * @implements MessageBusInterface<QueryBus>
+     *
+     * @return QueryBus
      */
     public function getQueryBus()
     {
@@ -132,9 +128,11 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     }
 
     /**
-     * return the event bus
+     * return the event bus.
      *
-     * @return \Ecotone\Modelling\EventBus
+     * @implements MessageBusInterface<EventBus>
+     *
+     * @return EventBus
      */
     public function getEventBus()
     {
@@ -142,67 +140,79 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     }
 
     /**
-     * send command
+     * send command.
      *
-     * @param Message $command
+     * @template T
+     * @template R
      *
-     * @return mixed
+     * @implements MessageBusInterface<T>
+     *
+     * @param T
+     *
+     * @return R
      */
-    public function sendCommand(Message $message)
+    public function sendCommand($message)
     {
         return $this->getCommandBus()->send($message);
     }
 
     /**
-     * send query
+     * send Query.
      *
-     * @param Message $query
+     * @template T
+     * @template R
      *
-     * @return mixed
+     * @implements MessageBusInterface<T>
+     *
+     * @param T
+     *
+     * @return R
      */
-    public function sendQuery(Message $message)
+    public function sendQuery($message)
     {
         return $this->getQueryBus()->send($message);
     }
 
     /**
-     * publish event
+     * publish event.
      *
-     * @param Message $message
+     * @template T
      *
-     * @param string $eventBusReferenceName
+     * @implements MessageBusInterface<T>
      *
-     * @return void
+     * @param T $message
      */
-    public function publishMessage(Message $message, ?string $eventBusReferenceName = null)
+    public function publishMessage($message, ?string $eventBusReferenceName = null)
     {
-        $eventBusInstance = $this->ecotoneInstance->getDistributedBus();
-
-        if ($eventBusReferenceName)
+        if (null != $eventBusReferenceName) {
             $eventBusInstance = $this->ecotoneInstance->getGatewayByName($eventBusReferenceName);
+        } else {
+            $eventBusInstance = $this->ecotoneInstance->getDistributedBus();
+        }
 
+        $payload = ['data' => $message->payload()];
+        $headers = ['headers' => $message->headers()];
         $eventRoute = $this->getRouteEvent($message);
-        // TODO: get message metadata for send
         if ($eventBusInstance instanceof EventBus) {
-            $eventBusInstance->publishWithRouting($eventRoute, $message);
+            $eventBusInstance->publishWithRouting(routingKey: $eventRoute, event: $payload, metadata: $headers);
         }
         if ($eventBusInstance instanceof DistributedBus) {
-            $eventBusInstance->convertAndPublishEvent($eventRoute, $message, []);
+            $eventBusInstance->convertAndPublishEvent(routingKey: $eventRoute, event: $payload, metadata: $headers);
         }
         if ($eventBusInstance instanceof MessagePublisher) {
-            $eventBusInstance->convertAndSendWithMetadata($message, []);
+            $eventBusInstance->convertAndSendWithMetadata(data: $payload, metadata: $payload);
         }
     }
 
     private function getRouteEvent($message): string
     {
-        $messageNamespace = $message::class;
-        return $messageNamespace;
+        return $message::class;
     }
 
     public function listConsumersCommand(): array
     {
         $commandResult = $this->ecotoneInstance->runConsoleCommand('ecotone:list', []);
+
         return ['header' => $commandResult->getColumnHeaders(), 'rows' => $commandResult->getRows()];
     }
 

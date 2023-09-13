@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\IHeaderMessage;
 use Ecotone\Enqueue\CachedConnectionFactory;
 use Ecotone\Messaging\Channel\PollableChannel\Serialization\OutboundMessage;
 use Ecotone\Messaging\Channel\PollableChannel\Serialization\OutboundMessageConverter;
 use Ecotone\Messaging\Conversion\ConversionService;
 use Ecotone\Messaging\{Message, MessageHandler, MessageHeaders};
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\IHeaderMessage;
 use Interop\Queue\{Destination, Message as buildMessageReturn};
 
 abstract class CustomEnqueueOutboundChannelAdapter implements MessageHandler
@@ -50,11 +50,9 @@ abstract class CustomEnqueueOutboundChannelAdapter implements MessageHandler
         $headers = $outboundMessage->getHeaders();
         $headers[MessageHeaders::CONTENT_TYPE] = $outboundMessage->getContentType();
 
-        if (is_subclass_of($message->getPayload(), \FretePago\Core\Domain\Event::class)) {
-            $this->messageBrokerHeaders->enrichHeaderByMessagePayload($message->getPayload());
+        if (isset($headers['headers']) && !empty($headers['headers'])) {
+            $this->messageBrokerHeaders->enrichHeadersByArray(json_decode($headers['headers'], true));
         }
-
-        $this->messageBrokerHeaders->enrichHeadersByArray($headers);
 
         $messageBrokerHeaders = $this->messageBrokerHeaders->getSchema();
 

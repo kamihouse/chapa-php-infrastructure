@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Configuration;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Configuration;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Connection\RedisConnectionFactory;
 use Ecotone\Enqueue\EnqueueMessageConsumerConfiguration;
 use Ecotone\Redis\RedisInboundChannelAdapterBuilder;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Connection\RedisConnectionFactory;
 
 final class RedisMessageConsumerConfiguration extends EnqueueMessageConsumerConfiguration
 {

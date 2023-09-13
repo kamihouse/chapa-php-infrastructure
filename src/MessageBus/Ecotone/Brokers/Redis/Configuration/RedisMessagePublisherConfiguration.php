@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Configuration;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Configuration;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Connection\RedisConnectionFactory;
 use Ecotone\Messaging\MessagePublisher;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Connection\RedisConnectionFactory;
 
 final class RedisMessagePublisherConfiguration
 {

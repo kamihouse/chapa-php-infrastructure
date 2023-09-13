@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration;
 
 use Ecotone\Messaging\Attribute\ServiceContext;
 use Ecotone\Modelling\Config\InstantRetry\InstantRetryConfiguration;

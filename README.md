@@ -145,7 +145,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\MessageBus;
 
-use FretePago\Core\Infrastructure\MessageBus\MessageBusInterface;
+use ChapaPhp\Infrastructure\MessageBus\MessageBusInterface;
 use Illuminate\Console\Command;
 
 class MessageBusListCommand extends Command
@@ -183,7 +183,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\MessageBus;
 
-use FretePago\Core\Infrastructure\MessageBus\MessageBusInterface;
+use ChapaPhp\Infrastructure\MessageBus\MessageBusInterface;
 use Illuminate\Console\Command;
 
 class MessageBusRunCommand extends Command
@@ -266,7 +266,7 @@ No arquivo de injeção de dependencia adicione uma nova injeção para o Dispat
 O dispatcher conta com uma função `withPublisherBusReferenceName` que recebe a referencia da interface especificada na **busReferenceName** configuração. ex:
 
 ```php
-$this->app->when(CreateEscrowBankingPaymentController::class)->needs(TransactionDispatcher::class)->give(
+$this->app->when(CreateFeatureController::class)->needs(TransactionDispatcher::class)->give(
             function () {
                 $intance = $this->app->make(MessageBusInterface::class);
                 return (new TransactionDispatcher($this->app->make(TransactionBus::class)))->withPublisherBusReferenceName(TransactionBus::class);
@@ -298,12 +298,87 @@ class FeatureEventHandler
 }
 ```
 
-Assim como em commands/queries, este arquivo tem a função de bridge para a camada de aplicação.
-
 Onde:
 
 -   _#[Distributed]_ - Indica o tipo de driver configurado, no caso a configuração acima e padrão é a **distributed**
 -   _#[EventHandler(listenTo: "Domain\\Events\\FeatureCreated")]_ - indica que a função é to dipo manipulador de eventos.
     -   _listenTo_ - indica a rota dos eventos que ele consumirá, por padrão a rota é o próprio namespace do evento.
+
+Assim como em commands/queries, este arquivo tem a função de bridge para a camada de aplicação.
+
+Após a criaçãodo comando, adicione arquivos de criação **builder e director** na pasta infrastructure/creator  da funcionalidade:
+```php
+class FeatureEventBuilder implements Builder
+{
+    private ?string $id = null;
+    private ?array $payload = null;
+    private ?array $headers = null;
+    public function build(): Feature
+    {
+        return new Feature($this->id, $this->headers, $this->payload);
+    }
+
+    public function withId(string $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+
+    public function withHeaders(array $headers): self
+    {
+        $this->headers = $headers;
+        return $this;
+    }
+    public function withPayload(array $payload): self
+    {
+        $this->payload = $payload;
+        return $this;
+    }
+
+    public function targetType(): string
+    {
+        return Feature::class;
+    }
+
+}
+```
+
+```php
+/**
+ * @implements Director<FeaturePlaced, array>
+ */
+class FeaturePlacedEventDirector implements Director
+{
+    public function __construct(
+        private readonly FeaturePlacedEventBuilder $builder,
+    ) {
+    }
+
+    public function make($data)
+    {
+        return $this->builder
+            ->withId($data['messageHeader']['Identifier'] ?? '')
+            ->withHeaders($data['messageHeader'])
+            ->withPayload($data['data'])
+            ->build();
+    }
+
+    public function targetType(): string
+    {
+        return $this->builder->targetType();
+    }
+}
+```
+
+Após a criação deve-se injetar a fábrica do evento no construtor do JsonToPhpConverter do Ecotote, ex:
+
+```php
+$this->app->singleton(JsonToPhpConverter::class, function () {
+            $factory = new AbstractJsonToPhpFactory();
+            $factory->addDirector(new FeatureEventDirector(new FeatureEventBuilder()));
+            return new JsonToPhpConverter($factory);
+        });
+```
+
 
 Para iniciar o consumidor de eventos execute o comando `php artisan message-bus:run {consumer}` onde {consumer} é o nome do canal configurado na chave _endpointId_ arquivo App/Ecotone/[configuration].php

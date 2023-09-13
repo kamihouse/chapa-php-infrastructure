@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Sqs;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Sqs;
 
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 use Ecotone\Enqueue\{CachedConnectionFactory, EnqueueOutboundChannelAdapterBuilder, HttpReconnectableConnectionFactory};
 use Ecotone\Messaging\Channel\PollableChannel\Serialization\OutboundMessageConverter;
 use Ecotone\Messaging\Conversion\ConversionService;
 use Ecotone\Messaging\Handler\{ChannelResolver, ReferenceSearchService};
 use Enqueue\Sqs\SqsConnectionFactory;
-use FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 
 class CustomSqsOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapterBuilder
 {
@@ -34,7 +34,7 @@ class CustomSqsOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapt
         $conversionService = $referenceSearchService->get(ConversionService::REFERENCE_NAME);
 
         // call the headers HERE!
-        $messageBrokerHeadersReferenceName = new($this->messageBrokerHeadersReferenceName)();
+        $messageBrokerHeadersReferenceName = new ($this->messageBrokerHeadersReferenceName)();
 
         return new CustomSqsOutboundChannelAdapter(
             CachedConnectionFactory::createFor(new HttpReconnectableConnectionFactory($connectionFactory)),

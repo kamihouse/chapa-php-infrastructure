@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Converters;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Converters;
 
 use Ecotone\Messaging\Attribute\MediaTypeConverter;
 use Ecotone\Messaging\Conversion\{Converter, MediaType};

@@ -3,7 +3,7 @@ parameters:
         - src
     excludePaths:
         - tests
-    level: 5
+    level: 7
     reportUnmatchedIgnoredErrors: false
     checkGenericClassInNonGenericObjectType: false
     inferPrivatePropertyTypeFromConstructor: true

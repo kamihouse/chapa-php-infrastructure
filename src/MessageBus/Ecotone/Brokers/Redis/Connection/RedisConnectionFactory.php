@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FretePago\Core\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Connection;
+namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Redis\Connection;
 
 use Enqueue\Redis\Redis;
 use Enqueue\Redis\RedisContext;
