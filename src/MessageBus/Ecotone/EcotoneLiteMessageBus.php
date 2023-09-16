@@ -27,7 +27,7 @@ class EcotoneLiteMessageBus implements MessageBusInterface
     /**
      * @var array<string>
      */
-    private $namespaces = ['Fretepago\\Core'];
+    private $namespaces = ['ChapaPhp'];
 
     /**
      * @var array<object>|ContainerInterface
