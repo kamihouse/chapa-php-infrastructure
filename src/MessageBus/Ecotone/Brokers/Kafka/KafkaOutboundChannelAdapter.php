@@ -49,8 +49,8 @@ final class KafkaOutboundChannelAdapter extends CustomEnqueueOutboundChannelAdap
             $kafkaMessage->setPartition($props['partition']);
         }
 
-        if (isset($headers['TraceId']) && !empty($headers['TraceId'])) {
-            $kafkaMessage->setKey($headers['TraceId']);
+        if (isset($headers['Identifier']) && !empty($headers['Identifier'])) {
+            $kafkaMessage->setKey($headers['Identifier']);
         }
 
         return $kafkaMessage;
