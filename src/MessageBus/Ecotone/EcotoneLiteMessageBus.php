@@ -6,6 +6,7 @@ namespace ChapaPhp\Infrastructure\MessageBus\Ecotone;
 
 use ChapaPhp\Infrastructure\MessageBus\Ecotone\Converters\JsonToPhpConverter;
 use ChapaPhp\Infrastructure\MessageBus\MessageBusInterface;
+use Ds\Map;
 use Ecotone\Lite\EcotoneLite;
 use Ecotone\Messaging\Config\ConfiguredMessagingSystem;
 use Ecotone\Messaging\Config\ServiceConfiguration;
