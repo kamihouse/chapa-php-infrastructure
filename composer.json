@@ -66,14 +66,17 @@
     },
     "require": {
         "ecotone/lite-application": "^1.102",
+        "ecotone/redis": "^1.102",
+        "ecotone/sqs": "^1.99",
         "ecotone/enqueue": "^1.102",
         "ecotone/jms-converter": "^1.92",
         "enqueue/enqueue": "^0.10.19",
         "enqueue/rdkafka": "^0.10.19",
         "chapa-php/application": "^0.1.0",
-        "ramsey/uuid": "^4.7"
+        "ramsey/uuid": "^4.7",
+        "predis/predis": "^1.1"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "version": "0.3.0"
+    "version": "0.4.0"
 }
