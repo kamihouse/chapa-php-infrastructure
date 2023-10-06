@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
 
 use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\CustomEnqueueOutboundChannelAdapter;
+use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaEnqueueJsonSerializable;
 use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\IHeaderMessage;
 use Ecotone\Enqueue\CachedConnectionFactory;
 use Ecotone\Messaging\Channel\PollableChannel\Serialization\OutboundMessageConverter;
@@ -36,6 +37,7 @@ final class KafkaOutboundChannelAdapter extends CustomEnqueueOutboundChannelAdap
     public function initialize(): void
     {
         $context = $this->connectionFactory->createContext();
+        $context->setSerializer(new KafkaEnqueueJsonSerializable());
         $context->createQueue($this->topic->getTopicName());
     }
 
