@@ -47,6 +47,16 @@ class KafkaEnqueueJsonSerializable implements Serializer
             $data['data'] = $data['body'];
         }
 
-        return new RdKafkaMessage($data['data'], $data['properties'], $data['headers']);
+        if (!is_string($data['data'])) {
+            $data['data'] = json_encode($data['data']);
+        }
+
+        $properties = ['contentType' => 'application/json'];
+
+        if (!empty($data['properties'])) {
+            $properties = array_merge($properties, $data['properties']);
+        }
+
+        return new RdKafkaMessage($data['data'], $properties, $data['headers'] ?? []);
     }
 }
