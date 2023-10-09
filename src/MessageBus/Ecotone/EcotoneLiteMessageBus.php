@@ -191,7 +191,7 @@ class EcotoneLiteMessageBus implements MessageBusInterface
             $eventBusInstance = $this->ecotoneInstance->getDistributedBus();
         }
 
-        $payload = ['data' => $message->payload()];
+        $payload = is_a($message->payload(), Map::class) ? $message->payload()->toArray() : $message->payload();
         $headers = ['headers' => is_a($message->headers(), Map::class) ? $message->headers()->toArray() : $message->headers()];
         $eventRoute = $this->getRouteEvent($message);
         if ($eventBusInstance instanceof EventBus) {
