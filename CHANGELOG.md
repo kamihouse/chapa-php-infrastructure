@@ -4,6 +4,15 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [0.8.0](https://github.com/mateusmacedo/chapa-php-infrastructure/compare/v0.7.0...v0.8.0) (2023-10-09)
+
+### Bug Fixes
+
+* Removed data key from payload ([d15e02](https://github.com/mateusmacedo/chapa-php-infrastructure/commit/d15e021759374efe8d8e96d7c9fcd0d1adca82c1))
+
+
+---
+
 ## [0.7.0](https://github.com/mateusmacedo/chapa-php-infrastructure/compare/v0.6.0...v0.7.0) (2023-10-06)
 
 
