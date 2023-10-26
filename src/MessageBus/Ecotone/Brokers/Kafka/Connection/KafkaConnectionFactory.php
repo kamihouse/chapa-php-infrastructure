@@ -5,67 +5,27 @@ declare(strict_types=1);
 namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection;
 
 use Enqueue\RdKafka\RdKafkaConnectionFactory;
-use RdKafka\{Conf, KafkaConsumer, TopicPartition};
+use RdKafka\{Conf, KafkaConsumer};
+use Enqueue\RdKafka\Serializer;
 
 class KafkaConnectionFactory extends RdKafkaConnectionFactory
 {
     private ?Conf $config = null;
     private ?KafkaConsumer $consumer = null;
-
+    private ?Serializer $messageSerializer = null;
     public function __construct(?array $config = [])
     {
         parent::__construct($config);
-        $this->setConfig($config);
     }
 
-    public function setConfig(?array $config = null): void
+    public function withMessageSerializer(Serializer $messageSerializer): self
     {
-        $this->config ??= new Conf();
-        if (isset($config['topic']) && is_array($config['topic'])) {
-            foreach ($config['topic'] as $key => $value) {
-                $this->config->set($key, $value);
-            }
-        }
-
-        if (isset($config['partitioner'])) {
-            $this->config->set('partitioner', $config['partitioner']);
-        }
-
-        if (isset($config['global']) && is_array($config['global'])) {
-            foreach ($config['global'] as $key => $value) {
-                $this->config->set($key, $value);
-            }
-        }
-
-        if (isset($config['dr_msg_cb'])) {
-            $this->config->setDrMsgCb($config['dr_msg_cb']);
-        }
-
-        if (isset($config['error_cb'])) {
-            $this->config->setErrorCb($config['error_cb']);
-        }
-
-        if (isset($config['rebalance_cb'])) {
-            $this->config->setRebalanceCb($config['rebalance_cb']);
-        }
-
-        if (isset($config['stats_cb'])) {
-            $this->config->setStatsCb($config['stats_cb']);
-        }
+        $this->messageSerializer = $messageSerializer;
+        return $this;
     }
 
-    public function getConsumer(string $autoCommit = 'true'): KafkaConsumer
+    public function getMessageSerializer(): Serializer|null
     {
-        $this->config->set('enable.auto.commit', (string) $autoCommit);
-        if (!$this->consumer) {
-            $this->consumer = new KafkaConsumer($this->config);
-        }
-
-        return $this->consumer;
-    }
-
-    public function createTopicPartition(string $queueName, int $partition): TopicPartition
-    {
-        return new TopicPartition($queueName, $partition);
+        return $this->messageSerializer;
     }
 }

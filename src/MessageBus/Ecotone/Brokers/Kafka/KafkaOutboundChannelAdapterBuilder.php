@@ -35,9 +35,6 @@ class KafkaOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapterBu
         /** @var ConversionService $conversionService */
         $conversionService = $referenceSearchService->get(ConversionService::REFERENCE_NAME);
 
-        // call the headers HERE!
-        $messageBrokerHeadersReferenceName = new ($this->messageBrokerHeadersReferenceName)();
-
         $this->topicConfig ??= new KafkaTopicConfiguration();
 
         return new KafkaOutboundChannelAdapter(
@@ -46,7 +43,7 @@ class KafkaOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapterBu
             $this->autoDeclare,
             new OutboundMessageConverter($this->headerMapper, $this->defaultConversionMediaType, $this->defaultDeliveryDelay, $this->defaultTimeToLive, $this->defaultPriority, $this->staticHeadersToAdd),
             $conversionService,
-            $messageBrokerHeadersReferenceName
+            $connectionFactory->getMessageSerializer()
         );
     }
 

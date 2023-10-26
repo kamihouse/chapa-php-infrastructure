@@ -48,7 +48,7 @@ final class KafkaInboundChannelAdapterBuilder extends EnqueueInboundChannelAdapt
             $this->receiveTimeoutInMilliseconds,
             new InboundMessageConverter($this->getEndpointId(), $this->acknowledgeMode, $headerMapper, EnqueueHeader::HEADER_ACKNOWLEDGE),
             $conversionService,
-            $this->topicConfig,
+            $connectionFactory->getMessageSerializer(),
         );
     }
 }
