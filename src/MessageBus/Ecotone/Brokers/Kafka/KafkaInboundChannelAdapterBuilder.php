@@ -6,12 +6,16 @@ namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
 
 use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Configuration\KafkaTopicConfiguration;
 use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaConnectionFactory;
+use Ecotone\Enqueue\CachedConnectionFactory;
 use Ecotone\Enqueue\EnqueueHeader;
 use Ecotone\Enqueue\{EnqueueInboundChannelAdapterBuilder, InboundMessageConverter};
+use Ecotone\Enqueue\HttpReconnectableConnectionFactory;
+use Ecotone\Messaging\Config\Container\Definition;
+use Ecotone\Messaging\Config\Container\MessagingContainerBuilder;
+use Ecotone\Messaging\Config\Container\Reference;
 use Ecotone\Messaging\Conversion\ConversionService;
-use Ecotone\Messaging\Endpoint\PollingMetadata;
-use Ecotone\Messaging\Handler\{ChannelResolver, ReferenceSearchService};
 use Ecotone\Messaging\MessageConverter\DefaultHeaderMapper;
+use Ramsey\Uuid\Uuid;
 
 final class KafkaInboundChannelAdapterBuilder extends EnqueueInboundChannelAdapterBuilder
 {
@@ -30,25 +34,29 @@ final class KafkaInboundChannelAdapterBuilder extends EnqueueInboundChannelAdapt
         return new self($topicName, $endpointId, $requestChannelName, $connectionReferenceName, $topicConfig);
     }
 
-    public function createInboundChannelAdapter(ChannelResolver $channelResolver, ReferenceSearchService $referenceSearchService, PollingMetadata $pollingMetadata): KafkaInboundChannelAdapter
+    public function compile(MessagingContainerBuilder $builder): Definition
     {
-        /** @var KafkaConnectionFactory $connectionFactory */
-        $connectionFactory = $referenceSearchService->get($this->connectionReferenceName);
+        $connectionFactory = new Definition(CachedConnectionFactory::class, [
+            new Definition(HttpReconnectableConnectionFactory::class, [
+                new Reference($this->connectionReferenceName),
+                Uuid::uuid4()->toString(),
+            ]),
+        ], 'createFor');
 
-        /** @var ConversionService $conversionService */
-        $conversionService = $referenceSearchService->get(ConversionService::REFERENCE_NAME);
+        $inboundMessageConverter = new Definition(InboundMessageConverter::class, [
+            $this->endpointId,
+            $this->acknowledgeMode,
+            DefaultHeaderMapper::createWith($this->headerMapper, []),
+            EnqueueHeader::HEADER_ACKNOWLEDGE,
+        ]);
 
-        $headerMapper = DefaultHeaderMapper::createWith($this->headerMapper, []);
-
-        return new KafkaInboundChannelAdapter(
+        return new Definition(KafkaInboundChannelAdapter::class, [
             $connectionFactory,
-            $this->buildGatewayFor($referenceSearchService, $channelResolver, $pollingMetadata),
             $this->declareOnStartup,
             $this->messageChannelName,
             $this->receiveTimeoutInMilliseconds,
-            new InboundMessageConverter($this->getEndpointId(), $this->acknowledgeMode, $headerMapper, EnqueueHeader::HEADER_ACKNOWLEDGE),
-            $conversionService,
-            $connectionFactory->getMessageSerializer(),
-        );
+            $inboundMessageConverter,
+            new Reference(ConversionService::REFERENCE_NAME)
+        ]);
     }
 }

@@ -18,8 +18,7 @@ final class KafkaOutboundChannelAdapter extends EnqueueOutboundChannelAdapter
         protected RdKafkaTopic $topic,
         protected bool $autoDeclare,
         protected OutboundMessageConverter $outboundMessageConverter,
-        private ConversionService $conversionService,
-        protected ?Serializer $customSerializer = null
+        private ConversionService $conversionService
     ) {
         parent::__construct(
             $connectionFactory,
@@ -34,8 +33,5 @@ final class KafkaOutboundChannelAdapter extends EnqueueOutboundChannelAdapter
     {
         $context = $this->connectionFactory->createContext();
         $context->createQueue($this->topic->getTopicName());
-        if ($this->customSerializer != null) {
-            $context->setSerializer($this->customSerializer);
-        }
     }
 }

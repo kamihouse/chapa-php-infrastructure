@@ -9,9 +9,14 @@ use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaCon
 use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\MessageBrokerHeaders\DefaultMessageHeader;
 use Ecotone\Enqueue\{CachedConnectionFactory, EnqueueOutboundChannelAdapterBuilder, HttpReconnectableConnectionFactory};
 use Ecotone\Messaging\Channel\PollableChannel\Serialization\OutboundMessageConverter;
+use Ecotone\Messaging\Config\Container\Definition;
+use Ecotone\Messaging\Config\Container\MessagingContainerBuilder;
+use Ecotone\Messaging\Config\Container\Reference;
+use Ecotone\Messaging\Config\DefinedObjectWrapper;
 use Ecotone\Messaging\Conversion\ConversionService;
 use Ecotone\Messaging\Handler\{ChannelResolver, ReferenceSearchService};
 use Enqueue\RdKafka\RdKafkaTopic;
+use Ramsey\Uuid\Uuid;
 
 class KafkaOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapterBuilder
 {
@@ -27,26 +32,6 @@ class KafkaOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapterBu
         return new self($topicName, $connectionFactoryReferenceName, $messageBrokerHeadersReferenceName, $topicConfig);
     }
 
-    public function build(ChannelResolver $channelResolver, ReferenceSearchService $referenceSearchService): KafkaOutboundChannelAdapter
-    {
-        /** @var KafkaConnectionFactory $connectionFactory */
-        $connectionFactory = $referenceSearchService->get($this->connectionFactoryReferenceName);
-
-        /** @var ConversionService $conversionService */
-        $conversionService = $referenceSearchService->get(ConversionService::REFERENCE_NAME);
-
-        $this->topicConfig ??= new KafkaTopicConfiguration();
-
-        return new KafkaOutboundChannelAdapter(
-            CachedConnectionFactory::createFor(new HttpReconnectableConnectionFactory($connectionFactory)),
-            $this->buildKafkaTopic($this->topicName, $this->topicConfig),
-            $this->autoDeclare,
-            new OutboundMessageConverter($this->headerMapper, $this->defaultConversionMediaType, $this->defaultDeliveryDelay, $this->defaultTimeToLive, $this->defaultPriority, $this->staticHeadersToAdd),
-            $conversionService,
-            $connectionFactory->getMessageSerializer()
-        );
-    }
-
     public function withStaticHeadersToEnrich(array $headers): self
     {
         $this->staticHeadersToAdd = $headers;
@@ -54,17 +39,47 @@ class KafkaOutboundChannelAdapterBuilder extends EnqueueOutboundChannelAdapterBu
         return $this;
     }
 
-    private function buildKafkaTopic(string $topicName, KafkaTopicConfiguration $topicConfig): RdKafkaTopic
+    private function buildKafkaTopic(string $topicName, ?KafkaTopicConfiguration $topicConfig = null): Definition
     {
-        $kafkaTopic = new RdKafkaTopic($topicName);
+        $topicConfig ??= new KafkaTopicConfiguration();
+
+        $kafkaTopic = new Definition(RdKafkaTopic::class, [$this->topicName]);
 
         if (!is_null($topicConfig->getpublisherPartition())) {
-            $kafkaTopic->setPartition($topicConfig->getpublisherPartition());
+            $kafkaTopic->addMethodCall('setPartition', [$topicConfig->getpublisherPartition()]);
         }
         if (!is_null($topicConfig->getPublisherKey())) {
-            $kafkaTopic->setKey($topicConfig->getPublisherKey());
+            $kafkaTopic->addMethodCall('setKey', [$topicConfig->getPublisherKey()]);
         }
 
         return $kafkaTopic;
+    }
+
+    public function compile(MessagingContainerBuilder $builder): Definition
+    {
+        $connectionFactory = new Definition(CachedConnectionFactory::class, [
+            new Definition(HttpReconnectableConnectionFactory::class, [
+                new Reference($this->connectionFactoryReferenceName),
+                Uuid::uuid4()->toString(),
+            ]),
+        ], 'createFor');
+
+        $outboundMessageConverter = new Definition(OutboundMessageConverter::class, [
+            $this->headerMapper,
+            $this->defaultConversionMediaType,
+            $this->defaultDeliveryDelay,
+            $this->defaultTimeToLive,
+            $this->defaultPriority,
+            $this->staticHeadersToAdd,
+        ]);
+
+        $kafkaTopic = new Definition(RdKafkaTopic::class, [$this->topicName]);
+        return new Definition(KafkaOutboundChannelAdapter::class, [
+            $connectionFactory,
+            $this->buildKafkaTopic($this->topicName, $this->topicConfig),
+            $this->autoDeclare,
+            $outboundMessageConverter,
+            new Reference(ConversionService::REFERENCE_NAME)
+        ]);
     }
 }

@@ -4,48 +4,37 @@ declare(strict_types=1);
 
 namespace ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka;
 
-use ChapaPhp\Infrastructure\MessageBus\Ecotone\Brokers\Kafka\Connection\KafkaConnectionFactory;
-use Ecotone\Enqueue\{CachedConnectionFactory, HttpReconnectableConnectionFactory, InboundMessageConverter};
+use Ecotone\Enqueue\{CachedConnectionFactory, InboundMessageConverter};
 use Ecotone\Enqueue\EnqueueInboundChannelAdapter;
 use Ecotone\Messaging\Conversion\ConversionService;
-use Ecotone\Messaging\Endpoint\InboundChannelAdapterEntrypoint;
-use Enqueue\RdKafka\Serializer;
+use Ecotone\Messaging\MessagePoller;
+use Ecotone\Messaging\Support\MessageBuilder;
+use Enqueue\RdKafka\JsonSerializer;
+use Enqueue\RdKafka\RdKafkaContext;
+use Exception;
 use GuzzleHttp\Exception\ConnectException;
+use Interop\Queue\Message as EnqueueMessage;
+use Ecotone\Messaging\Message;
 
 final class KafkaInboundChannelAdapter extends EnqueueInboundChannelAdapter
 {
-    private $connection;
     private bool $initialized = false;
+    private RdKafkaContext $context;
 
     public function __construct(
-        KafkaConnectionFactory $connectionFactory,
-        InboundChannelAdapterEntrypoint $entrypointGateway,
-        bool $declareOnStartup,
-        string $queueName,
-        int $receiveTimeoutInMilliseconds,
-        InboundMessageConverter $inboundMessageConverter,
-        ConversionService $conversionService,
-        protected ?Serializer $customSerializer = null
+        protected CachedConnectionFactory $connectionFactory,
+        protected bool $declareOnStartup,
+        protected string $queueName,
+        protected int $receiveTimeoutInMilliseconds,
+        protected InboundMessageConverter $inboundMessageConverter,
+        protected ConversionService $conversionService,
     ) {
-        $this->connection = $connectionFactory;
-        parent::__construct(
-            CachedConnectionFactory::createFor(new HttpReconnectableConnectionFactory($connectionFactory)),
-            $entrypointGateway,
-            $declareOnStartup,
-            $queueName,
-            $receiveTimeoutInMilliseconds,
-            $inboundMessageConverter,
-            $conversionService
-        );
     }
 
     public function initialize(): void
     {
-        $context = $this->connectionFactory->createContext();
-        $context->createQueue($this->queueName);
-        if ($this->customSerializer != null) {
-            $context->setSerializer($this->customSerializer);
-        }
+        $this->context = $this->connectionFactory->createContext();
+        $this->context->createQueue($this->queueName);
     }
 
     public function connectionException(): string
@@ -57,5 +46,28 @@ final class KafkaInboundChannelAdapter extends EnqueueInboundChannelAdapter
     {
         // @phpstan-ignore-next-line
         return is_subclass_of($exception, $this->connectionException()) || $this->connectionException() === $exception::class;
+    }
+
+    public function enrichMessage(EnqueueMessage $sourceMessage, MessageBuilder $targetMessage): MessageBuilder
+    {
+        $serializer = $this->context->getSerializer();
+        if ($serializer != null && $serializer instanceof JsonSerializer != true) {
+            $this->serializeMessageWithHeaders($targetMessage, $sourceMessage);
+        }
+        return $targetMessage;
+    }
+
+    private function serializeMessageWithHeaders(MessageBuilder $targetMessage, EnqueueMessage $sourceMessage)
+    {
+        $json = json_encode([
+            'data' => $sourceMessage->getBody(),
+            'properties' => $sourceMessage->getProperties(),
+            'headers' => $sourceMessage->getHeaders(),
+        ]);
+        $message = $this->context->getSerializer()->toMessage($json);
+        $targetMessage->setPayload($message->getBody());
+        $targetMessage->setMultipleHeaders($message->getHeaders());
+
+        return $targetMessage;
     }
 }

@@ -15,8 +15,7 @@ class CustomEnqueueKafkaMessageSerializer implements Serializer
         $this->normalizeMessageToSend($message);
         $json = json_encode([
             'data' => $message->getBody(),
-            'properties' => $message->getProperties(),
-            'headers' => $message->getHeaders(),
+            'properties' => $message->getProperties()
         ]);
 
         if (JSON_ERROR_NONE !== json_last_error()) {

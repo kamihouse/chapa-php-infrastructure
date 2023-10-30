@@ -4,6 +4,11 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [0.10.0](https://github.com/mateusmacedo/chapa-php-infrastructure/compare/v0.9.0...v0.10.0) (2023-10-30)
+
+
+---
+
 ## [0.8.0](https://github.com/mateusmacedo/chapa-php-infrastructure/compare/v0.7.0...v0.8.0) (2023-10-09)
 
 ### Bug Fixes

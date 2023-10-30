@@ -65,11 +65,11 @@
         }
     },
     "require": {
-        "ecotone/lite-application": "^1.102",
-        "ecotone/redis": "^1.102",
-        "ecotone/sqs": "^1.99",
-        "ecotone/enqueue": "^1.102",
-        "ecotone/jms-converter": "^1.92",
+        "ecotone/lite-application": "^1.200",
+        "ecotone/redis": "^1.200",
+        "ecotone/sqs": "^1.200",
+        "ecotone/enqueue": "^1.200",
+        "ecotone/jms-converter": "^1.200",
         "enqueue/enqueue": "^0.10.19",
         "enqueue/rdkafka": "^0.10.19",
         "chapa-php/application": "^0.1.0",
@@ -78,5 +78,5 @@
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "version": "0.8.0"
+    "version": "0.10.0"
 }
